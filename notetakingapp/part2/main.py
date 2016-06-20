@@ -1,20 +1,22 @@
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request,url_for
 from flask_sqlalchemy import SQLAlchemy 
+from flask_login import login_user, logout_user, current_user, login_required,LoginManager
 import os
 import json
 import traceback
 from AlchemyEncoder import AlchemyEncoder
+from forms import LoginForm
 
 app = Flask(__name__)
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
-    os.path.join(basedir, 'app.sqlite')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+app.config.from_object('config')
+
 # if( not os.path.exists(app.config['SQLALCHEMY_DATABASE_URI']))
 # db.create_all()
 db = SQLAlchemy(app)
-
+lm = LoginManager()
+#lm.login_view = 'userlogin'
+lm.init_app(app)
 
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,6 +26,7 @@ class Note(db.Model):
 
 @app.route("/home")
 @app.route("/")
+#@login_required
 def home():
     '''for line in traceback.format_stack():
         print(line.strip())'''
@@ -56,6 +59,7 @@ def delete():
 
 
 @app.route("/ajaxCreate", methods=["POST"])
+@login_required
 def ajaxCreate():
     title = request.form["title"]
     body = request.form["body"]
@@ -66,6 +70,19 @@ def ajaxCreate():
     return json.dumps(note, cls=AlchemyEncoder)
     # return "ok"
 
+@app.route("/login",methods=["POST","GET"])
+def userlogin():
+
+    form = LoginForm()
+        #if form.validate_on_submit():
+        #session['remember_me'] = form.remember_me.data
+        #print(form.remember_me.data)
+    return render_template("login.html",form=form)
+
+@app.errorhandler(401)
+def unauthorized_error(error):
+    #return render_template("login.html"), 401
+    return redirect(url_for("userlogin"))
 
 if __name__ == "__main__":
 
